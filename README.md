@@ -49,3 +49,7 @@ python main.py make --genre horror --count 3
 
 - Pri realističnih AI slikah ob nalaganju vklopi **"Altered or synthetic content"**.
 - Ne nalagaj velikih količin podobnih videov. Program si zapomni že narejene ideje, vseeno pa vsak video preglej in dodaj svoj vložek.
+
+## Slike
+
+Brez ključa slike riše brezplačni **Pollinations**. Ker je brezplačen, med slikami čaka približno 15 sekund, zato video z 6 scenami traja nekaj minut. Za hitrejše in zanesljivejše slike si lahko na **enter.pollinations.ai** ustvariš brezplačen ključ in ga v Colab Secrets shraniš kot `POLLINATIONS_API_KEY`.

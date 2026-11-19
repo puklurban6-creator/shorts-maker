@@ -18,6 +18,7 @@ KEYS = [
     ("YOUTUBE_API_KEY", "YouTube Data API key - FREE, trend ideas (optional)"),
     ("ANTHROPIC_API_KEY", "Anthropic (Claude) API key - paid story writer (optional)"),
     ("OPENAI_API_KEY", "OpenAI API key - paid AI images (optional)"),
+    ("POLLINATIONS_API_KEY", "Pollinations key - FREE, faster AI images (optional, enter.pollinations.ai)"),
 ]
 
 DEFAULTS = {
