@@ -12,7 +12,7 @@ The owner works only from an iPhone (no computer) and speaks Slovenian - reply i
 - `trends.py` - YouTube Data API, reads only titles/views (never downloads videos)
 - `story.py` - writes ORIGINAL stories; providers: Gemini (free, default) -> Groq -> Anthropic -> OpenAI, or force with `LLM_PROVIDER`
 - `voice.py` - free Edge TTS with word timings
-- `images.py` - OpenAI images if key, else generated backgrounds
+- `images.py` - OpenAI images if key, else FREE Pollinations (no key), else plain generated backgrounds; force with `IMAGE_PROVIDER`
 - `video.py` - FFmpeg: Ken Burns scenes, ASS subtitles, optional music, 1080x1920
 - `config.py` - keys from env / `.env`; `SHORTS_OUTPUT_DIR`, `SHORTS_HISTORY_FILE`, `SHORTS_MUSIC_DIR` overrides
 

@@ -1,6 +1,12 @@
-"""Scene images: OpenAI if a key exists, otherwise free generated backgrounds."""
+"""Scene images.
+Order: OpenAI (paid, if key) -> Pollinations (FREE, no key) -> plain generated background.
+Force one with IMAGE_PROVIDER=openai|pollinations|none"""
 import base64
+import io
 import random
+import time
+import urllib.parse
+import zlib
 
 import requests
 from PIL import Image, ImageDraw, ImageFilter
@@ -43,11 +49,41 @@ def _fallback(seed, out):
     Image.blend(img, glow, 0.35).save(out, quality=92)
 
 
-def make(prompt, style, out, seed):
-    if config.get("OPENAI_API_KEY"):
+def _pollinations(prompt, out, seed, tries=3):
+    url = "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt[:900])
+    params = {"width": W, "height": H, "nologo": "true", "seed": seed,
+              "model": config.get("POLLINATIONS_MODEL") or "flux"}
+    last = None
+    for attempt in range(tries):
         try:
-            _openai(f"{prompt}. Style: {style}. Vertical 9:16, no text, no letters.", out)
+            r = requests.get(url, params=params, timeout=180)
+            r.raise_for_status()
+            img = Image.open(io.BytesIO(r.content)).convert("RGB")  # fails if not an image
+            img.save(out, quality=92)
             return
         except Exception as e:
-            print(f"  image API failed ({e}), using fallback background")
+            last = e
+            time.sleep(5 * (attempt + 1))  # free service: be gentle, wait and retry
+    raise RuntimeError(last)
+
+
+def make(prompt, style, out, seed):
+    full = f"{prompt}. Style: {style}. Vertical 9:16, no text, no letters."
+    num_seed = zlib.crc32(str(seed).encode()) % 1_000_000
+    provider = config.get("IMAGE_PROVIDER").lower()
+    if not provider:
+        provider = "openai" if config.get("OPENAI_API_KEY") else "pollinations"
+    if provider == "openai":
+        try:
+            _openai(full, out)
+            return
+        except Exception as e:
+            print(f"  OpenAI image failed ({e}), trying free Pollinations")
+            provider = "pollinations"
+    if provider == "pollinations":
+        try:
+            _pollinations(full, out, num_seed)
+            return
+        except Exception as e:
+            print(f"  free image service failed ({e}), using plain background")
     _fallback(seed, out)

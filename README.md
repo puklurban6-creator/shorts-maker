@@ -2,7 +2,7 @@
 
 Naredi izvirne angleške zgodbe za YouTube Shorts. Iz YouTuba prebere samo naslove in število ogledov popularnih Shortsov, ugotovi, kaj deluje, in napiše **povsem novo** zgodbo. Nič se ne kopira in nič se ne prenaša.
 
-**Privzeto je vse brezplačno:** Gemini piše zgodbe, Edge glas bere, slike so generirana ozadja (AI slike prek OpenAI so neobvezne in plačljive).
+**Privzeto je vse brezplačno:** Gemini piše zgodbe, Edge glas bere, AI slike riše brezplačni Pollinations (brez ključa). OpenAI slike so neobvezne in plačljive.
 
 ## Kako delujeta Claude Code in Colab skupaj
 
@@ -31,7 +31,7 @@ Naredi izvirne angleške zgodbe za YouTube Shorts. Iz YouTuba prebere samo naslo
 | `GROQ_API_KEY` | Ne, rezerva za zgodbe | Brezplačno |
 | `YOUTUBE_API_KEY` | Priporočeno, za trende | Brezplačno (console.cloud.google.com → YouTube Data API v3) |
 | `ANTHROPIC_API_KEY` | Ne | Plačljivo |
-| `OPENAI_API_KEY` | Ne, za prave AI slike | Plačljivo |
+| `OPENAI_API_KEY` | Ne, boljše AI slike | Plačljivo (brez njega rišejo brezplačno Pollinations) |
 
 Ponudnika lahko izbereš z `LLM_PROVIDER=gemini|groq|anthropic|openai`.
 
