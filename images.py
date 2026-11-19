@@ -50,9 +50,10 @@ def _fallback(seed, out):
 
 
 _last_call = [0.0]
+_disabled = [False]  # after one total failure, skip the free service for the rest of the run
 
 
-def _pollinations(prompt, out, seed, tries=4):
+def _pollinations(prompt, out, seed, tries=2):
     """Free image service. Anonymous use is rate-limited (about 1 image / 15 s),
     so we space requests out. Optional free key: POLLINATIONS_API_KEY (enter.pollinations.ai)."""
     key = config.get("POLLINATIONS_API_KEY")
@@ -82,7 +83,8 @@ def _pollinations(prompt, out, seed, tries=4):
             except Exception as e:
                 last = f"{type(e).__name__}: {str(e)[:150]}"
         print(f"    image try {attempt + 1}/{tries} failed - {last}")
-        time.sleep(10 * (attempt + 1))
+        time.sleep(5)
+    _disabled[0] = True
     raise RuntimeError(last)
 
 
@@ -99,11 +101,11 @@ def make(prompt, style, out, seed):
         except Exception as e:
             print(f"  OpenAI image failed ({e}), trying free Pollinations")
             provider = "pollinations"
-    if provider == "pollinations":
+    if provider == "pollinations" and not _disabled[0]:
         try:
             _pollinations(full, out, num_seed)
             print(f"    image OK: {out.name}")
             return
         except Exception as e:
-            print(f"  free image service failed ({e}), using plain background")
+            print(f"  free image service failed ({e}) - using plain backgrounds for this video")
     _fallback(seed, out)
