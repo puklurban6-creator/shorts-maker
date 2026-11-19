@@ -50,42 +50,51 @@ def _fallback(seed, out):
 
 
 _last_call = [0.0]
-_disabled = [False]  # after one total failure, skip the free service for the rest of the run
+_state = {"ok": 0, "disabled": False, "last_good": None}
+RETRYABLE = {408, 425, 429, 500, 502, 503, 504, 530}
 
 
-def _pollinations(prompt, out, seed, tries=2):
-    """Free image service. Anonymous use is rate-limited (about 1 image / 15 s),
-    so we space requests out. Optional free key: POLLINATIONS_API_KEY (enter.pollinations.ai)."""
+def _pollinations(prompt, out, seed, tries=4):
+    """Free image service. Anonymous use is rate-limited, so we space requests out
+    and back off when it says 'too many requests'.
+    Optional free key: POLLINATIONS_API_KEY (enter.pollinations.ai) = faster + fewer limits."""
     key = config.get("POLLINATIONS_API_KEY")
     q = urllib.parse.quote(prompt[:800], safe="")
     params = {"width": W, "height": H, "nologo": "true", "seed": seed,
               "model": config.get("POLLINATIONS_MODEL") or "flux"}
-    targets = []
     if key:
-        targets.append((f"https://gen.pollinations.ai/image/{q}",
-                        {"Authorization": f"Bearer {key}"}, {**params, "key": key}))
-    targets.append((f"https://image.pollinations.ai/prompt/{q}", {}, params))
+        url, headers, params = (f"https://gen.pollinations.ai/image/{q}",
+                                {"Authorization": f"Bearer {key}"}, {**params, "key": key})
+        gap = 3
+    else:
+        url, headers, gap = f"https://image.pollinations.ai/prompt/{q}", {}, 20
     last = "unknown error"
     for attempt in range(tries):
-        for url, headers, prm in targets:
-            wait = 16 - (time.time() - _last_call[0])
-            if wait > 0:
-                time.sleep(wait)
-            _last_call[0] = time.time()
-            try:
-                r = requests.get(url, params=prm, headers=headers, timeout=240)
-                if r.status_code != 200:
-                    last = f"HTTP {r.status_code}: {r.text[:150]!r}"
-                    continue
+        wait = gap - (time.time() - _last_call[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last_call[0] = time.time()
+        try:
+            r = requests.get(url, params=params, headers=headers, timeout=240)
+            if r.status_code == 200:
                 img = Image.open(io.BytesIO(r.content)).convert("RGB")
                 img.save(out, quality=92)
                 return
-            except Exception as e:
-                last = f"{type(e).__name__}: {str(e)[:150]}"
-        print(f"    image try {attempt + 1}/{tries} failed - {last}")
-        time.sleep(5)
-    _disabled[0] = True
+            last = f"HTTP {r.status_code}: {r.text[:150]!r}"
+            if r.status_code not in RETRYABLE:
+                break  # e.g. 401/403 - waiting will not help
+        except Exception as e:
+            last = f"{type(e).__name__}: {str(e)[:150]}"
+        backoff = 30 * (attempt + 1)
+        print(f"    image try {attempt + 1}/{tries} failed - {last} - waiting {backoff}s")
+        time.sleep(backoff)
     raise RuntimeError(last)
+
+
+def _reuse(out):
+    """Use the last good AI image again (mirrored, so it looks different)."""
+    img = Image.open(_state["last_good"]).convert("RGB").transpose(Image.FLIP_LEFT_RIGHT)
+    img.save(out, quality=92)
 
 
 def make(prompt, style, out, seed):
@@ -97,15 +106,24 @@ def make(prompt, style, out, seed):
     if provider == "openai":
         try:
             _openai(full, out)
+            _state["last_good"] = out
             return
         except Exception as e:
             print(f"  OpenAI image failed ({e}), trying free Pollinations")
             provider = "pollinations"
-    if provider == "pollinations" and not _disabled[0]:
+    if provider == "pollinations" and not _state["disabled"]:
         try:
             _pollinations(full, out, num_seed)
+            _state["ok"] += 1
+            _state["last_good"] = out
             print(f"    image OK: {out.name}")
             return
         except Exception as e:
-            print(f"  free image service failed ({e}) - using plain backgrounds for this video")
+            print(f"  free image failed ({e})")
+            if _state["ok"] == 0:  # never worked in this run -> don't keep waiting
+                _state["disabled"] = True
+    if _state["last_good"]:
+        print(f"    reusing previous image for {out.name}")
+        _reuse(out)
+        return
     _fallback(seed, out)
