@@ -1,0 +1,5 @@
+__pycache__/
+shorts_maker/output/
+shorts_maker/history.json
+.env
+shorts_maker/.env
